@@ -10,7 +10,7 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 2. install pillow library if you don't have it already:
 
    ```bash
-   pip install Pillow
+   pip install pillow
    ```
 
 3. Make the script executable:
