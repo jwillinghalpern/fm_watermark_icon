@@ -7,10 +7,16 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 ## Installation
 
 1. Download or clone this repository to your local machine.
-2. install pillow library if you don't have it already:
 
    ```bash
-   pip install pillow
+   git clone https://github.com/jwillinghalpern/fm_watermark_icon.git
+   cd fm_watermark_icon
+   ```
+
+2. Install pillow
+
+   ```bash
+   python3 -m pip install --upgrade pip && python3 -m pip install pillow
    ```
 
 3. Make the script executable:
