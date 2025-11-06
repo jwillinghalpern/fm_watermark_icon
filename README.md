@@ -30,13 +30,13 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 Run the script from the terminal with the following command:
 
 ```bash
-python3 fm_watermark_icon.py /path/to/FileMaker Pro.app 22
+python3 fm_watermark_icon.py '/Applications/FileMaker Pro.app' 22
 ```
 
 Or if you moved it to your PATH, even easier!
 
 ```bash
-fm_watermark_icon /path/to/FileMaker Pro.app 22
+fm_watermark_icon '/Applications/FileMaker Pro.app' 22
 ```
 
 ## Notes
