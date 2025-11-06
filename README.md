@@ -33,17 +33,19 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 
 ## Usage
 
-Run the script from the terminal with the following command:
+1. Run the script from the terminal with the following command:
 
-```bash
-python3 fm_watermark_icon.py '/Applications/FileMaker Pro.app' 22
-```
+   ```bash
+   python3 fm_watermark_icon.py '/Applications/FileMaker Pro.app' 22
+   ```
 
-Or if you moved it to your PATH, even easier!
+   Or if you moved it to your PATH, even easier!
 
-```bash
-fm_watermark_icon '/Applications/FileMaker Pro.app' 22
-```
+   ```bash
+   fm_watermark_icon '/Applications/FileMaker Pro.app' 22
+   ```
+
+2. Right-click on the FileMaker Pro app in Finder and select "Get Info". Then drag or paste the new icon over the old one in the top left corner of the Info window.
 
 ## Notes
 
