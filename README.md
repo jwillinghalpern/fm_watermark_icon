@@ -2,7 +2,7 @@
 
 add a watermark to your FileMaker Pro icons to quickly differentiate filemaker versions. For example, you can add a "20" watermark to your FileMaker Pro 20 app and a "21" watermark to your FileMaker Pro 21 app.
 
-This only works on macos.
+![icons](readme.png)
 
 ## Installation
 
@@ -38,3 +38,7 @@ Or if you moved it to your PATH, even easier!
 ```bash
 fm_watermark_icon /path/to/FileMaker Pro.app 22
 ```
+
+## Notes
+
+This only works on macos.
