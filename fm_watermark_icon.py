@@ -25,7 +25,6 @@ def find_fm12app_icns(app_path):
     
     Args:
         app_path: Path to the .app bundle
-        watermark_text: Text to use as watermark. e.g. "22" for FMP 22.
     
     Returns:
         Path to FM12App.icns or None if not found
