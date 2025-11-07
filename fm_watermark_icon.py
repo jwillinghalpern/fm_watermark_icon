@@ -2,13 +2,18 @@
 """
 FileMaker App Icon Watermarker
 Adds a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.
-Once the watermark is added to the output file, you can right-click on the FMP application, Get Info,
-and drag the icons over the icon in the Info window to replace the app icon.
+
+When run without an output path, the script will automatically update the app bundle's icon
+using the fileicon command (must be installed separately: brew install fileicon).
+
+When run with an output path, the watermarked icon will be saved to that location instead
+of updating the app bundle directly.
 
 Author:
 	Josh Willing Halpern
 History:
 	- 2025-11-06: Initial version
+	- 2025-11-07: Added fileicon integration for automatic app icon updates
 """
 
 import os
@@ -138,11 +143,50 @@ def create_icns_from_iconset(iconset_path, output_path):
         print(f"stderr: {e.stderr.decode()}")
         return False
 
+def update_app_icon(app_path, icns_path):
+    """
+    Update the app bundle's icon using fileicon command.
+    
+    Args:
+        app_path: Path to the .app bundle
+        icns_path: Path to the .icns file to set as icon
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Check if fileicon is available
+        subprocess.run(
+            ["which", "fileicon"],
+            check=True,
+            capture_output=True
+        )
+        
+        # Use fileicon to set the app's icon
+        subprocess.run(
+            ["fileicon", "set", str(app_path), str(icns_path)],
+            check=True,
+            capture_output=True
+        )
+        return True
+    except subprocess.CalledProcessError as e:
+        if "which" in str(e.cmd):
+            print("Error: fileicon command not found. Please install fileicon first:")
+            print("brew install fileicon")
+        else:
+            print(f"Error updating app icon: {e}")
+            if e.stderr:
+                print(f"stderr: {e.stderr.decode()}")
+        return False
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python watermark_icon.py <path_to_app> <watermark_number> [output_path]")
         print("Example: python watermark_icon.py /Applications/MyApp.app 22")
         print("Example: python watermark_icon.py /Applications/MyApp.app 22 ~/Desktop/FM12App_watermarked.icns")
+        print("")
+        print("If no output_path is provided, the app's icon will be updated directly using fileicon.")
+        print("If output_path is provided, the watermarked icon will be saved to that location instead.")
         sys.exit(1)
     
     app_path = sys.argv[1]
@@ -183,18 +227,32 @@ def main():
             print(f"Adding watermark to {png_file.name}...")
             add_watermark_to_image(png_file, watermark_text)
         
-        # Determine output path
+        # Determine output behavior
         if output_path:
+            # Save to specified output path (disable app icon update)
             output_icns = Path(output_path)
+            print(f"Creating watermarked .icns file at {output_icns}...")
+            if create_icns_from_iconset(iconset_path, output_icns):
+                print(f"Success! Watermarked icon saved to: {output_icns}")
+            else:
+                sys.exit(1)
         else:
-            output_icns = Path.home() / "Desktop" / f"FM12App.icns"
-        
-        # Create the new .icns file
-        print(f"Creating watermarked .icns file at {output_icns}...")
-        if create_icns_from_iconset(iconset_path, output_icns):
-            print(f"Success! Watermarked icon saved to: {output_icns}")
-        else:
-            sys.exit(1)
+            # Update app bundle icon directly using fileicon
+            temp_icns = Path(temp_dir) / "watermarked.icns"
+            print("Creating temporary watermarked .icns file...")
+            if create_icns_from_iconset(iconset_path, temp_icns):
+                print(f"Updating app icon for {app_path}...")
+                if update_app_icon(app_path, temp_icns):
+                    print(f"Success! App icon updated for: {app_path}")
+                    print("Note: You may need to refresh Finder or restart the app to see the changes.")
+                else:
+                    print("Failed to update app icon. You can manually drag the icon to the app:")
+                    fallback_path = Path.home() / "Desktop" / f"FM12App_watermarked.icns"
+                    if create_icns_from_iconset(iconset_path, fallback_path):
+                        print(f"Watermarked icon saved to: {fallback_path}")
+                    sys.exit(1)
+            else:
+                sys.exit(1)
 
 if __name__ == "__main__":
     main()
