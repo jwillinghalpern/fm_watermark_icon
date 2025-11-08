@@ -25,14 +25,14 @@ History:
 	- 2025-11-07: Added tinting functionality for colored regions
 """
 
-import os
+# import os
 import sys
 import argparse
 import subprocess
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
-import shutil
+# import shutil
 import numpy as np
 from typing import Tuple
 
@@ -108,15 +108,15 @@ def _deg_to_ph(deg: float) -> int:
 def recolor_background_region(
     image_path,
     target_hex: str,
-    tolerance: int = 5
+    tolerance: int = 15
 ) -> None:
     """
-    Recolor white (#FFFFFF) pixels to target color while preserving transparency.
+    Recolor white and near-white pixels to target color while preserving transparency.
     
     Args:
         image_path: Path to the image file
         target_hex: Target color in hex format (e.g., "#F0F0F0")
-        tolerance: RGB tolerance for matching white pixels (default: 5)
+        tolerance: RGB tolerance for matching white-ish pixels (default: 15)
     """
     img_rgba = Image.open(image_path).convert("RGBA")
     
@@ -127,11 +127,11 @@ def recolor_background_region(
     # Target RGB
     target_rgb = _hex_to_rgb(target_hex)
     
-    # Create mask for white pixels (within tolerance) that are not transparent
+    # Create mask for white-ish pixels (within tolerance) that are not transparent
     white_mask = (
-        (np.abs(rgb_array[:, :, 0] - 255) <= tolerance) &
-        (np.abs(rgb_array[:, :, 1] - 255) <= tolerance) &
-        (np.abs(rgb_array[:, :, 2] - 255) <= tolerance) &
+        (rgb_array[:, :, 0] >= (255 - tolerance)) &
+        (rgb_array[:, :, 1] >= (255 - tolerance)) &
+        (rgb_array[:, :, 2] >= (255 - tolerance)) &
         (alpha_array > 0)
     )
     
