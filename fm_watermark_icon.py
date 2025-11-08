@@ -267,11 +267,11 @@ def parse_arguments():
         description="Add a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.",
         epilog="""
 Examples:
-  %(prog)s /Applications/MyApp.app --text 22
-  %(prog)s /Applications/MyApp.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
-  %(prog)s /Applications/MyApp.app --text 22 --color "#FF8A00"
-  %(prog)s /Applications/MyApp.app --color "#00A7FF" -o ~/Desktop/output.icns
-  %(prog)s /Applications/MyApp.app --color "#FF8A00" --text 22
+  %(prog)s --app /Applications/MyApp.app --text 22
+  %(prog)s --app /Applications/MyApp.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
+  %(prog)s --app /Applications/MyApp.app --text 22 --color "#FF8A00"
+  %(prog)s --app /Applications/MyApp.app --color "#00A7FF" -o ~/Desktop/output.icns
+  %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --text 22
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
@@ -283,8 +283,10 @@ non-black/grayish regions) while preserving the original lighting and shadows.
     )
     
     parser.add_argument(
-        'app_path',
+        '-a', '--app',
+        dest='app_path',
         metavar='APP_PATH',
+        required=True,
         help='Path to the .app bundle containing FM12App.icns'
     )
     
@@ -296,14 +298,14 @@ non-black/grayish regions) while preserving the original lighting and shadows.
     )
     
     parser.add_argument(
-        '--text',
+        '-t', '--text',
         dest='watermark_text',
         metavar='WATERMARK_TEXT',
         help='Optional: Text to use as watermark (typically a number). If not provided, no watermark will be added.'
     )
     
     parser.add_argument(
-        '--color',
+        '-c', '--color',
         dest='tint_color',
         metavar='HEX_COLOR',
         help='Optional: Hex color to tint colored regions of the icon (e.g., #FF8A00). Targets any non-whitish and non-black/grayish parts.'
