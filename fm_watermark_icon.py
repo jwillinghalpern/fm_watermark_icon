@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-FileMaker App Icon Watermarker
+FileMaker App Icon Watermarker + Optional Tinting
 Adds a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.
+Optionally tints any colored regions of the icon while preserving lighting and shadows.
 
 When run without an output path, the script will automatically update the app bundle's icon
 using the fileicon command (must be installed separately: brew install fileicon).
@@ -9,11 +10,15 @@ using the fileicon command (must be installed separately: brew install fileicon)
 When run with an output path, the watermarked icon will be saved to that location instead
 of updating the app bundle directly.
 
+The --tint option allows you to recolor any colored parts of the icon (non-whitish,
+non-black/grayish regions) to a new color while preserving the original gradients.
+
 Author:
 	Josh Willing Halpern
 History:
 	- 2025-11-06: Initial version
 	- 2025-11-07: Added fileicon integration for automatic app icon updates
+	- 2025-11-07: Added tinting functionality for colored regions
 """
 
 import os
@@ -24,6 +29,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
 import shutil
+import numpy as np
+from typing import Tuple
 
 def find_fm12app_icns(app_path):
     """
@@ -80,6 +87,75 @@ def extract_icns_images(icns_path, temp_dir):
         print(f"Error extracting icns: {e}")
         print(f"stderr: {e.stderr.decode()}")
         return None
+
+def _hex_to_rgb(hexstr: str) -> Tuple[int, int, int]:
+    """Convert hex color string to RGB tuple."""
+    s = hexstr.strip().lstrip("#")
+    if len(s) == 3:
+        s = "".join(ch * 2 for ch in s)
+    if len(s) != 6:
+        raise ValueError(f"Invalid hex color: {hexstr}")
+    return (int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16))
+
+def _deg_to_ph(deg: float) -> int:
+    """Convert degrees to Pillow hue (0-255 range)."""
+    return int(round((deg % 360.0) / 360.0 * 255.0))
+
+def tint_colored_region(
+    image_path,
+    target_hex: str,
+    min_sat: int = 65,
+    min_val: int = 45,
+    max_sat_for_gray: int = 30,
+    min_val_for_white: int = 195
+) -> None:
+    """
+    Tint any colored pixels (non-whitish, non-black/grayish) to target hue while preserving saturation/value.
+    
+    Args:
+        image_path: Path to the image file
+        target_hex: Target color in hex format (e.g., "#FF8A00")
+        min_sat: Minimum saturation to consider a pixel "colored" (0-255)
+        min_val: Minimum value/brightness to consider a pixel "colored" (0-255)
+        max_sat_for_gray: Maximum saturation to consider a pixel "gray" (0-255)
+        min_val_for_white: Minimum value/brightness to consider a pixel "whitish" (0-255)
+    """
+    img_rgba = Image.open(image_path).convert("RGBA")
+    a = np.array(img_rgba.split()[-1], dtype=np.uint8)
+    
+    hsv = img_rgba.convert("RGB").convert("HSV")
+    h, s, v = [np.array(ch, dtype=np.uint8) for ch in hsv.split()]
+    
+    # Create mask for colored regions (more inclusive thresholds):
+    # - Must have moderate saturation (s >= 65) to avoid most grayish pixels
+    # - Must have some brightness (v >= 45) to avoid very dark pixels
+    # - Exclude whitish pixels (high value with very low saturation)
+    # - Has alpha (not transparent)
+    mask = (
+        (s >= min_sat) &  # Must have moderate saturation (not gray/desaturated)
+        (v >= min_val) &  # Not too dark
+        (v <= 250) &  # Not too bright (avoid very light pixels)
+        ~((v >= min_val_for_white) & (s <= max_sat_for_gray)) &  # Not whitish
+        (a > 0)  # Not transparent
+    )
+    
+    # Convert target hex to HSV hue
+    target_h = Image.new("RGB", (1, 1), _hex_to_rgb(target_hex)).convert("HSV").getpixel((0, 0))[0]
+    
+    # Replace hue only for masked pixels
+    h2 = h.copy()
+    h2[mask] = np.uint8(target_h)
+    
+    # Reconstruct the image
+    hsv_new = Image.merge("HSV", (
+        Image.fromarray(h2, "L"),
+        Image.fromarray(s, "L"),
+        Image.fromarray(v, "L"),
+    )).convert("RGB")
+    
+    out = Image.merge("RGBA", (*hsv_new.split(), Image.fromarray(a, "L")))
+    out.save(image_path, "PNG")
+    img_rgba.close()
 
 def add_watermark_to_image(image_path, watermark_text):
     """
@@ -193,10 +269,14 @@ def parse_arguments():
 Examples:
   %(prog)s /Applications/MyApp.app 22
   %(prog)s /Applications/MyApp.app 22 -o ~/Desktop/FM12App_watermarked.icns
-  %(prog)s --app /Applications/MyApp.app --watermark 22 --output ~/Desktop/output.icns
+  %(prog)s /Applications/MyApp.app 22 --tint "#FF8A00"
+  %(prog)s /Applications/MyApp.app 22 --tint "#00A7FF" -o ~/Desktop/output.icns
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
+
+The --tint option allows you to recolor any colored parts of the icon (non-whitish,
+non-black/grayish regions) while preserving the original lighting and shadows.
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -220,6 +300,13 @@ If output path is provided, the watermarked icon will be saved to that location 
         help='Optional: Path to save the watermarked .icns file. If not provided, the app\'s icon will be updated directly using fileicon.'
     )
     
+    parser.add_argument(
+        '--tint',
+        dest='tint_color',
+        metavar='HEX_COLOR',
+        help='Optional: Hex color to tint colored regions of the icon (e.g., #FF8A00). Targets any non-whitish and non-black/grayish parts.'
+    )
+    
     return parser.parse_args()
 
 def main():
@@ -228,6 +315,7 @@ def main():
     app_path = args.app_path
     watermark_text = args.watermark
     output_path = args.output_path
+    tint_color = args.tint_color
     
     # Find the FM12App.icns file
     icns_path = find_fm12app_icns(app_path)
@@ -253,13 +341,24 @@ def main():
         
         print(f"Found {len(png_files)} images to watermark")
         
-        # Add watermark to 
+        # Process images: tint first (if specified), then add watermark
         for i, png_file in enumerate(png_files):
             # Skip images smaller than 64px
             img_temp = Image.open(png_file)
             if min(img_temp.size) < 64:
                 print(f"Skipping {png_file.name} (too small: {img_temp.size})")
+                img_temp.close()
                 continue
+            img_temp.close()
+            
+            # Apply tint if specified
+            if tint_color:
+                try:
+                    print(f"Tinting colored regions in {png_file.name} -> {tint_color}")
+                    tint_colored_region(png_file, tint_color)
+                except Exception as e:
+                    print(f"Warning: tint failed on {png_file.name}: {e}")
+            
             print(f"Adding watermark to {png_file.name}...")
             add_watermark_to_image(png_file, watermark_text)
         
