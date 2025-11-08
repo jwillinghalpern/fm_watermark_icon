@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-FileMaker App Icon Watermarker + Optional Tinting
+FileMaker App Icon Watermarker + Optional Tinting + Background Recoloring
 Adds a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.
 Optionally tints any colored regions of the icon while preserving lighting and shadows.
+Optionally recolors white/light background regions to a custom color.
 
 When run without an output path, the script will automatically update the app bundle's icon
 using the fileicon command (must be installed separately: brew install fileicon).
@@ -10,8 +11,11 @@ using the fileicon command (must be installed separately: brew install fileicon)
 When run with an output path, the watermarked icon will be saved to that location instead
 of updating the app bundle directly.
 
-The --tint option allows you to recolor any colored parts of the icon (non-whitish,
+The --color option allows you to recolor any colored parts of the icon (non-whitish,
 non-black/grayish regions) to a new color while preserving the original gradients.
+
+The --bg-color option allows you to recolor white/light background regions while
+preserving gradients and shadows.
 
 Author:
 	Josh Willing Halpern
@@ -100,6 +104,45 @@ def _hex_to_rgb(hexstr: str) -> Tuple[int, int, int]:
 def _deg_to_ph(deg: float) -> int:
     """Convert degrees to Pillow hue (0-255 range)."""
     return int(round((deg % 360.0) / 360.0 * 255.0))
+
+def recolor_background_region(
+    image_path,
+    target_hex: str,
+    tolerance: int = 5
+) -> None:
+    """
+    Recolor white (#FFFFFF) pixels to target color while preserving transparency.
+    
+    Args:
+        image_path: Path to the image file
+        target_hex: Target color in hex format (e.g., "#F0F0F0")
+        tolerance: RGB tolerance for matching white pixels (default: 5)
+    """
+    img_rgba = Image.open(image_path).convert("RGBA")
+    
+    # Get RGB and alpha arrays
+    rgb_array = np.array(img_rgba.convert("RGB"))
+    alpha_array = np.array(img_rgba.split()[-1], dtype=np.uint8)
+    
+    # Target RGB
+    target_rgb = _hex_to_rgb(target_hex)
+    
+    # Create mask for white pixels (within tolerance) that are not transparent
+    white_mask = (
+        (np.abs(rgb_array[:, :, 0] - 255) <= tolerance) &
+        (np.abs(rgb_array[:, :, 1] - 255) <= tolerance) &
+        (np.abs(rgb_array[:, :, 2] - 255) <= tolerance) &
+        (alpha_array > 0)
+    )
+    
+    # Replace white pixels with target color
+    rgb_array[white_mask] = target_rgb
+    
+    # Reconstruct the image
+    new_img = Image.fromarray(rgb_array, "RGB")
+    out = Image.merge("RGBA", (*new_img.split(), Image.fromarray(alpha_array, "L")))
+    out.save(image_path, "PNG")
+    img_rgba.close()
 
 def tint_colored_region(
     image_path,
@@ -272,12 +315,17 @@ Examples:
   %(prog)s --app /Applications/MyApp.app --text 22 --color "#FF8A00"
   %(prog)s --app /Applications/MyApp.app --color "#00A7FF" -o ~/Desktop/output.icns
   %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --text 22
+  %(prog)s --app /Applications/MyApp.app --text 22 --bg-color "#F0F0F0"
+  %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --bg-color "#E8E8E8" --text 22
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
 
 The --color option allows you to recolor any colored parts of the icon (non-whitish,
 non-black/grayish regions) while preserving the original lighting and shadows.
+
+The --bg-color option allows you to recolor white/light background regions while
+preserving gradients and shadows.
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -311,6 +359,13 @@ non-black/grayish regions) while preserving the original lighting and shadows.
         help='Optional: Hex color to tint colored regions of the icon (e.g., #FF8A00). Targets any non-whitish and non-black/grayish parts.'
     )
     
+    parser.add_argument(
+        '--bg-color',
+        dest='bg_color',
+        metavar='HEX_COLOR',
+        help='Optional: Hex color to replace white/light background regions (e.g., #F0F0F0). Preserves gradients and shading.'
+    )
+    
     return parser.parse_args()
 
 def main():
@@ -320,6 +375,7 @@ def main():
     watermark_text = args.watermark_text
     output_path = args.output_path
     tint_color = args.tint_color
+    bg_color = args.bg_color
     
     # Find the FM12App.icns file
     icns_path = find_fm12app_icns(app_path)
@@ -362,6 +418,14 @@ def main():
                     tint_colored_region(png_file, tint_color)
                 except Exception as e:
                     print(f"Warning: tint failed on {png_file.name}: {e}")
+            
+            # Apply background recoloring if specified
+            if bg_color:
+                try:
+                    print(f"Recoloring background in {png_file.name} -> {bg_color}")
+                    recolor_background_region(png_file, bg_color)
+                except Exception as e:
+                    print(f"Warning: background recolor failed on {png_file.name}: {e}")
             
             # Apply watermark if specified
             if watermark_text:
