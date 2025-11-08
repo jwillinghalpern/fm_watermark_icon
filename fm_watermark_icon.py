@@ -269,14 +269,14 @@ def parse_arguments():
 Examples:
   %(prog)s /Applications/MyApp.app --text 22
   %(prog)s /Applications/MyApp.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
-  %(prog)s /Applications/MyApp.app --text 22 --tint "#FF8A00"
-  %(prog)s /Applications/MyApp.app --tint "#00A7FF" -o ~/Desktop/output.icns
-  %(prog)s /Applications/MyApp.app --tint "#FF8A00" --text 22
+  %(prog)s /Applications/MyApp.app --text 22 --color "#FF8A00"
+  %(prog)s /Applications/MyApp.app --color "#00A7FF" -o ~/Desktop/output.icns
+  %(prog)s /Applications/MyApp.app --color "#FF8A00" --text 22
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
 
-The --tint option allows you to recolor any colored parts of the icon (non-whitish,
+The --color option allows you to recolor any colored parts of the icon (non-whitish,
 non-black/grayish regions) while preserving the original lighting and shadows.
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -303,7 +303,7 @@ non-black/grayish regions) while preserving the original lighting and shadows.
     )
     
     parser.add_argument(
-        '--tint',
+        '--color',
         dest='tint_color',
         metavar='HEX_COLOR',
         help='Optional: Hex color to tint colored regions of the icon (e.g., #FF8A00). Targets any non-whitish and non-black/grayish parts.'
