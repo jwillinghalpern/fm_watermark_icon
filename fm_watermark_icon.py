@@ -360,7 +360,7 @@ preserving gradients and shadows.
     )
     
     parser.add_argument(
-        '--bg-color',
+        '-b', '--bg-color',
         dest='bg_color',
         metavar='HEX_COLOR',
         help='Optional: Hex color to replace white/light background regions (e.g., #F0F0F0). Preserves gradients and shading.'
