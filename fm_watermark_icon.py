@@ -18,6 +18,7 @@ History:
 
 import os
 import sys
+import argparse
 import subprocess
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -179,19 +180,54 @@ def update_app_icon(app_path, icns_path):
                 print(f"stderr: {e.stderr.decode()}")
         return False
 
-def main():
-    if len(sys.argv) < 3:
-        print("Usage: python watermark_icon.py <path_to_app> <watermark_number> [output_path]")
-        print("Example: python watermark_icon.py /Applications/MyApp.app 22")
-        print("Example: python watermark_icon.py /Applications/MyApp.app 22 ~/Desktop/FM12App_watermarked.icns")
-        print("")
-        print("If no output_path is provided, the app's icon will be updated directly using fileicon.")
-        print("If output_path is provided, the watermarked icon will be saved to that location instead.")
-        sys.exit(1)
+def parse_arguments():
+    """
+    Parse command-line arguments using argparse.
     
-    app_path = sys.argv[1]
-    watermark_text = sys.argv[2]
-    output_path = sys.argv[3] if len(sys.argv) > 3 else None
+    Returns:
+        Namespace object containing parsed arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="Add a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.",
+        epilog="""
+Examples:
+  %(prog)s /Applications/MyApp.app 22
+  %(prog)s /Applications/MyApp.app 22 -o ~/Desktop/FM12App_watermarked.icns
+  %(prog)s --app /Applications/MyApp.app --watermark 22 --output ~/Desktop/output.icns
+
+If no output path is provided, the app's icon will be updated directly using fileicon.
+If output path is provided, the watermarked icon will be saved to that location instead.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    
+    parser.add_argument(
+        'app_path',
+        metavar='APP_PATH',
+        help='Path to the .app bundle containing FM12App.icns'
+    )
+    
+    parser.add_argument(
+        'watermark',
+        metavar='WATERMARK_TEXT',
+        help='Text to use as watermark (typically a number)'
+    )
+    
+    parser.add_argument(
+        '-o', '--output',
+        dest='output_path',
+        metavar='OUTPUT_PATH',
+        help='Optional: Path to save the watermarked .icns file. If not provided, the app\'s icon will be updated directly using fileicon.'
+    )
+    
+    return parser.parse_args()
+
+def main():
+    args = parse_arguments()
+    
+    app_path = args.app_path
+    watermark_text = args.watermark
+    output_path = args.output_path
     
     # Find the FM12App.icns file
     icns_path = find_fm12app_icns(app_path)
