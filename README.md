@@ -13,10 +13,10 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
    cd fm_watermark_icon
    ```
 
-2. Install [pillow](https://pypi.org/project/pillow/)
+2. Install [pillow](https://pypi.org/project/pillow/) and [numpy](https://pypi.org/project/numpy/)
 
    ```bash
-   python3 -m pip install --upgrade pip && python3 -m pip install pillow
+   python3 -m pip install --upgrade pip && python3 -m pip install pillow numpy
    ```
 
 3. Install [fileicon](https://github.com/mklement0/fileicon?tab=readme-ov-file#installation) using one of these approaches
@@ -45,27 +45,79 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 
 ## Usage Examples
 
-### Watermark the icon of FileMaker Pro.app with "22" and immediately update the app icon automatically
+### Basic watermarking with automatic app icon update
 
-If you added to your PATH:
+Add a "22" watermark and immediately update the app icon:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 22
+```
+
+Or using the short form:
+
+```bash
+fm_watermark_icon -a '/Applications/FileMaker Pro.app' -t 22
+```
+
+### Save watermarked icon to a file without updating the app
+
+Add a "23" watermark and save to a file instead of updating the app:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 23 --output new_icon.icns
+```
+
+### Color tinting options
+
+Change the colored parts of the icon to orange while adding a watermark:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 22 --color "#FF8A00"
+```
+
+Just tint the icon without adding text watermark:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --color "#00A7FF"
+```
+
+### Background color options
+
+Change white/light background regions to a custom color:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 22 --bg-color "#F0F0F0"
+```
+
+Combine colored region tinting with background color change:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 22 --color "#FF8A00" --bg-color "#E8E8E8"
+```
+
+### Custom watermark text color
+
+Use red text for the watermark:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 22 --text-color "#FF0000"
+```
+
+White text on a dark background:
+
+```bash
+fm_watermark_icon --app '/Applications/FileMaker Pro.app' --text 22 --text-color "#FFFFFF" --bg-color "#000000"
+```
+
+### Legacy format (still supported)
+
+The original positional argument format still works:
 
 ```bash
 fm_watermark_icon '/Applications/FileMaker Pro.app' 22
 ```
 
-Alternatively call with python
-
-```bash
-python3 fm_watermark_icon.py '/Applications/FileMaker Pro.app' 22
-```
-
-### Watermark the icon of FileMaker Pro.app with "23" and save the new icon to a file without updating the app icon
-
-```bash
-fm_watermark_icon '/Applications/FileMaker Pro.app' 23 --output new_icon.icns
-```
-
-If you use this approach, you can manually update the app icon for FileMaker by right-clicking on the FileMaker Pro app in Finder and selecting "Get Info". Then drag or paste the new icon over the old one in the top left corner of the Info window.
+If you use the `--output` approach, you can manually update the app icon for FileMaker by right-clicking on the FileMaker Pro app in Finder and selecting "Get Info". Then drag or paste the new icon over the old one in the top left corner of the Info window.
 
 ![get info](get-info.png)
 

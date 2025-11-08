@@ -144,7 +144,7 @@ def recolor_background_region(
     out.save(image_path, "PNG")
     img_rgba.close()
 
-def tint_colored_region(
+def colored_region(
     image_path,
     target_hex: str,
     min_sat: int = 65,
@@ -200,13 +200,14 @@ def tint_colored_region(
     out.save(image_path, "PNG")
     img_rgba.close()
 
-def add_watermark_to_image(image_path, watermark_text):
+def add_watermark_to_image(image_path, watermark_text, text_color=(38, 44, 42, 255)):
     """
     Add a watermark number to the bottom right of an image.
     
     Args:
         image_path: Path to the image file
         watermark_text: Text to use as watermark
+        text_color: RGBA tuple for text color (default: dark gray)
     """
     img = Image.open(image_path).convert("RGBA")
     width, height = img.size
@@ -237,8 +238,8 @@ def add_watermark_to_image(image_path, watermark_text):
     x = width - text_width - padding
     y = height - text_height - padding
     
-    # Draw text in nice gray color
-    draw.text((x, y), watermark_text, font=font, fill=(38, 44, 42, 255))
+    # Draw text with specified color
+    draw.text((x, y), watermark_text, font=font, fill=text_color)
     
     # Save the image
     img.save(image_path, "PNG")
@@ -317,6 +318,8 @@ Examples:
   %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --text 22
   %(prog)s --app /Applications/MyApp.app --text 22 --bg-color "#F0F0F0"
   %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --bg-color "#E8E8E8" --text 22
+  %(prog)s --app /Applications/MyApp.app --text 22 --text-color "#FF0000"
+  %(prog)s --app /Applications/MyApp.app --text 22 --text-color "#FFFFFF" --bg-color "#000000"
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
@@ -326,6 +329,8 @@ non-black/grayish regions) while preserving the original lighting and shadows.
 
 The --bg-color option allows you to recolor white/light background regions while
 preserving gradients and shadows.
+
+The --text-color option allows you to customize the watermark text color.
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -354,16 +359,23 @@ preserving gradients and shadows.
     
     parser.add_argument(
         '-c', '--color',
-        dest='tint_color',
+        dest='color',
         metavar='HEX_COLOR',
         help='Optional: Hex color to tint colored regions of the icon (e.g., #FF8A00). Targets any non-whitish and non-black/grayish parts.'
     )
     
     parser.add_argument(
-        '-b', '--bg-color',
+        '-bc', '--bg-color',
         dest='bg_color',
         metavar='HEX_COLOR',
         help='Optional: Hex color to replace white/light background regions (e.g., #F0F0F0). Preserves gradients and shading.'
+    )
+    
+    parser.add_argument(
+        '-tc', '--text-color',
+        dest='text_color',
+        metavar='HEX_COLOR',
+        help='Optional: Hex color for watermark text (e.g., #FF0000). Default is dark gray.'
     )
     
     return parser.parse_args()
@@ -374,8 +386,19 @@ def main():
     app_path = args.app_path
     watermark_text = args.watermark_text
     output_path = args.output_path
-    tint_color = args.tint_color
+    color = args.color
     bg_color = args.bg_color
+    text_color = args.text_color
+    
+    # Convert text color from hex to RGBA if provided
+    text_color_rgba = (38, 44, 42, 255)  # Default dark gray
+    if text_color:
+        try:
+            rgb = _hex_to_rgb(text_color)
+            text_color_rgba = (*rgb, 255)
+        except ValueError as e:
+            print(f"Warning: Invalid text color '{text_color}': {e}")
+            print("Using default text color instead.")
     
     # Find the FM12App.icns file
     icns_path = find_fm12app_icns(app_path)
@@ -412,10 +435,10 @@ def main():
             img_temp.close()
             
             # Apply tint if specified
-            if tint_color:
+            if color:
                 try:
-                    print(f"Tinting colored regions in {png_file.name} -> {tint_color}")
-                    tint_colored_region(png_file, tint_color)
+                    print(f"Tinting colored regions in {png_file.name} -> {color}")
+                    colored_region(png_file, color)
                 except Exception as e:
                     print(f"Warning: tint failed on {png_file.name}: {e}")
             
@@ -430,7 +453,7 @@ def main():
             # Apply watermark if specified
             if watermark_text:
                 print(f"Adding watermark to {png_file.name}...")
-                add_watermark_to_image(png_file, watermark_text)
+                add_watermark_to_image(png_file, watermark_text, text_color_rgba)
         
         # Determine output behavior
         if output_path:
