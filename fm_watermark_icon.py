@@ -267,10 +267,11 @@ def parse_arguments():
         description="Add a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.",
         epilog="""
 Examples:
-  %(prog)s /Applications/MyApp.app 22
-  %(prog)s /Applications/MyApp.app 22 -o ~/Desktop/FM12App_watermarked.icns
-  %(prog)s /Applications/MyApp.app 22 --tint "#FF8A00"
-  %(prog)s /Applications/MyApp.app 22 --tint "#00A7FF" -o ~/Desktop/output.icns
+  %(prog)s /Applications/MyApp.app --text 22
+  %(prog)s /Applications/MyApp.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
+  %(prog)s /Applications/MyApp.app --text 22 --tint "#FF8A00"
+  %(prog)s /Applications/MyApp.app --tint "#00A7FF" -o ~/Desktop/output.icns
+  %(prog)s /Applications/MyApp.app --tint "#FF8A00" --text 22
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
@@ -288,16 +289,17 @@ non-black/grayish regions) while preserving the original lighting and shadows.
     )
     
     parser.add_argument(
-        'watermark',
-        metavar='WATERMARK_TEXT',
-        help='Text to use as watermark (typically a number)'
-    )
-    
-    parser.add_argument(
         '-o', '--output',
         dest='output_path',
         metavar='OUTPUT_PATH',
         help='Optional: Path to save the watermarked .icns file. If not provided, the app\'s icon will be updated directly using fileicon.'
+    )
+    
+    parser.add_argument(
+        '--text',
+        dest='watermark_text',
+        metavar='WATERMARK_TEXT',
+        help='Optional: Text to use as watermark (typically a number). If not provided, no watermark will be added.'
     )
     
     parser.add_argument(
@@ -313,7 +315,7 @@ def main():
     args = parse_arguments()
     
     app_path = args.app_path
-    watermark_text = args.watermark
+    watermark_text = args.watermark_text
     output_path = args.output_path
     tint_color = args.tint_color
     
@@ -359,8 +361,10 @@ def main():
                 except Exception as e:
                     print(f"Warning: tint failed on {png_file.name}: {e}")
             
-            print(f"Adding watermark to {png_file.name}...")
-            add_watermark_to_image(png_file, watermark_text)
+            # Apply watermark if specified
+            if watermark_text:
+                print(f"Adding watermark to {png_file.name}...")
+                add_watermark_to_image(png_file, watermark_text)
         
         # Determine output behavior
         if output_path:
