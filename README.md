@@ -37,10 +37,18 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
    chmod +x fm_watermark_icon.py
    ```
 
-5. (Optional but recommended) Move the script to a directory in your PATH for easy access
+5. (Optional but recommended) Add the script to your PATH for easy access
+
+   **Option A: Copy to PATH**
 
    ```bash
    cp fm_watermark_icon.py /usr/local/bin/fm_watermark_icon
+   ```
+
+   **Option B: Create a symlink (preferred if you want to keep the script in its current location)**
+
+   ```bash
+   ln -s "$(pwd)/fm_watermark_icon.py" /usr/local/bin/fm_watermark_icon
    ```
 
 ## Usage Examples
