@@ -311,15 +311,15 @@ def parse_arguments():
         description="Add a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.",
         epilog="""
 Examples:
-  %(prog)s --app /Applications/MyApp.app --text 22
-  %(prog)s --app /Applications/MyApp.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
-  %(prog)s --app /Applications/MyApp.app --text 22 --color "#FF8A00"
-  %(prog)s --app /Applications/MyApp.app --color "#00A7FF" -o ~/Desktop/output.icns
-  %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --text 22
-  %(prog)s --app /Applications/MyApp.app --text 22 --bg-color "#F0F0F0"
-  %(prog)s --app /Applications/MyApp.app --color "#FF8A00" --bg-color "#E8E8E8" --text 22
-  %(prog)s --app /Applications/MyApp.app --text 22 --text-color "#FF0000"
-  %(prog)s --app /Applications/MyApp.app --text 22 --text-color "#FFFFFF" --bg-color "#000000"
+  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22
+  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
+  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --color "#FF8A00"
+  %(prog)s --app /Applications/FileMaker\ Pro.app --color "#00A7FF" -o ~/Desktop/output.icns
+  %(prog)s --app /Applications/FileMaker\ Pro.app --color "#FF8A00" --text 22
+  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --bg-color "#F0F0F0"
+  %(prog)s --app /Applications/FileMaker\ Pro.app --color "#FF8A00" --bg-color "#E8E8E8" --text 22
+  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --text-color "#FF0000"
+  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --text-color "#FFFFFF" --bg-color "#000000"
 
 If no output path is provided, the app's icon will be updated directly using fileicon.
 If output path is provided, the watermarked icon will be saved to that location instead.
