@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 """
 FileMaker App Icon Watermarker + Optional Tinting + Background Recoloring
-Adds a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.
+Adds a watermark number to FM12App.icns files with embedded FileMaker icon data.
 Optionally tints any colored regions of the icon while preserving lighting and shadows.
 Optionally recolors white/light background regions to a custom color.
 
-When run without an output path, the script will automatically update the app bundle's icon
-using the fileicon command (must be installed separately: brew install fileicon).
+When run without an output path, the watermarked icon will be saved to the Desktop.
+When run with an output path, the watermarked icon will be saved to that location.
+When run with the --app option, the watermarked icon will be applied directly to the specified FileMaker Pro app automatically.
 
-When run with an output path, the watermarked icon will be saved to that location instead
-of updating the app bundle directly.
+The --color option allows you to recolor the colored parts of the icon.
 
-The --color option allows you to recolor any colored parts of the icon (non-whitish,
-non-black/grayish regions) to a new color while preserving the original gradients.
-
-The --bg-color option allows you to recolor white/light background regions while
-preserving gradients and shadows.
+The --bg-color option allows you to recolor white/light background areas of the icon.
 
 Author:
 	Josh Willing Halpern
@@ -23,46 +19,74 @@ History:
 	- 2025-11-06: Initial version
 	- 2025-11-07: Added fileicon integration for automatic app icon updates
 	- 2025-11-07: Added tinting functionality for colored regions
+	- 2025-11-09: Embedded base64-encoded .icns file, removed --app dependency
 """
 
-# import os
 import sys
 import argparse
 import subprocess
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
-# import shutil
 import numpy as np
+import base64
 from typing import Tuple
 
-def find_fm12app_icns(app_path):
+# Import the embedded icon data
+try:
+    from .fm_watermark_icon_data import FM12APP_ICNS_B64
+except ImportError:
+    # Fallback for when running as a standalone script
+    import importlib.util
+    script_dir = Path(__file__).parent
+    data_file = script_dir / "fm_watermark_icon_data.py"
+    if data_file.exists():
+        spec = importlib.util.spec_from_file_location("fm_watermark_icon_data", data_file)
+        data_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(data_module)
+        FM12APP_ICNS_B64 = data_module.FM12APP_ICNS_B64
+    else:
+        print("Error: fm_watermark_icon_data.py not found!")
+        print(f"Please ensure fm_watermark_icon_data.py is in the same directory as this script.")
+        print(f"Script location: {Path(__file__).parent}")
+        sys.exit(1)
+
+def create_icns_from_base64(base64_data, output_path):
     """
-    Find FM12App.icns file in the application bundle's Resources folder.
+    Decode base64 data and save as .icns file.
     
     Args:
-        app_path: Path to the .app bundle
+        base64_data: Base64 encoded .icns data
+        output_path: Path where to save the decoded .icns file
     
     Returns:
-        Path to FM12App.icns or None if not found
+        True if successful, False otherwise
     """
-    app_path = Path(app_path)
+    try:
+        icns_data = base64.b64decode(base64_data)
+        with open(output_path, 'wb') as f:
+            f.write(icns_data)
+        return True
+    except Exception as e:
+        print(f"Error decoding base64 .icns data: {e}")
+        return False
+
+def create_embedded_icns(temp_dir):
+    """
+    Create FM12App.icns file from embedded base64 data.
     
-    if not app_path.exists():
-        print(f"Error: Application path does not exist: {app_path}")
-        return None
+    Args:
+        temp_dir: Temporary directory to save the .icns file
     
-    # Look in Contents/Resources/
-    resources_path = app_path / "Contents" / "Resources"
-    if not resources_path.exists():
-        print(f"Error: Resources folder not found in {app_path}")
-        return None
+    Returns:
+        Path to the created FM12App.icns or None if failed
+    """
+    icns_path = Path(temp_dir) / "FM12App.icns"
     
-    icns_path = resources_path / "FM12App.icns"
-    if icns_path.exists():
+    if create_icns_from_base64(FM12APP_ICNS_B64, icns_path):
         return icns_path
     
-    print(f"Error: FM12App.icns not found in {resources_path}")
+    print("Error: Failed to create FM12App.icns from embedded data")
     return None
 
 def extract_icns_images(icns_path, temp_dir):
@@ -300,6 +324,40 @@ def update_app_icon(app_path, icns_path):
                 print(f"stderr: {e.stderr.decode()}")
         return False
 
+def save_icon_to_desktop(icns_path, watermark_text=None, color=None, bg_color=None):
+    """
+    Save the watermarked icon to the Desktop with a descriptive name.
+    
+    Args:
+        icns_path: Path to the .icns file
+        watermark_text: Text used for watermarking (optional)
+        color: Color used for tinting (optional) 
+        bg_color: Background color used (optional)
+    
+    Returns:
+        Path to the saved file or None if failed
+    """
+    try:
+        # Build a descriptive filename
+        base_name = "FM12App"
+        if watermark_text:
+            base_name += f"_watermark_{watermark_text}"
+        if color:
+            base_name += f"_tinted_{color.replace('#', '')}"
+        if bg_color:
+            base_name += f"_bg_{bg_color.replace('#', '')}"
+        
+        desktop_path = Path.home() / "Desktop" / f"{base_name}.icns"
+        
+        # Copy the file to Desktop
+        import shutil
+        shutil.copy2(icns_path, desktop_path)
+        
+        return desktop_path
+    except Exception as e:
+        print(f"Error saving icon to desktop: {e}")
+        return None
+
 def parse_arguments():
     """
     Parse command-line arguments using argparse.
@@ -308,21 +366,23 @@ def parse_arguments():
         Namespace object containing parsed arguments
     """
     parser = argparse.ArgumentParser(
-        description="Add a watermark number to FM12App.icns files in FileMaker for MacOS application bundles.",
+        description="Add a watermark number to embedded FM12App.icns file with optional tinting and background recoloring.",
         epilog="""
 Examples:
-  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22
-  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 -o ~/Desktop/FM12App_watermarked.icns
-  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --color "#FF8A00"
-  %(prog)s --app /Applications/FileMaker\ Pro.app --color "#00A7FF" -o ~/Desktop/output.icns
-  %(prog)s --app /Applications/FileMaker\ Pro.app --color "#FF8A00" --text 22
-  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --bg-color "#F0F0F0"
-  %(prog)s --app /Applications/FileMaker\ Pro.app --color "#FF8A00" --bg-color "#E8E8E8" --text 22
-  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --text-color "#FF0000"
-  %(prog)s --app /Applications/FileMaker\ Pro.app --text 22 --text-color "#FFFFFF" --bg-color "#000000"
+  %(prog)s --text 22
+  %(prog)s --text 22 --app /Applications/FileMaker\ Pro.app
+  %(prog)s --text 22 -o ~/Desktop/FM12App_watermarked.icns
+  %(prog)s --text 22 --color "#FF8A00" --app /Applications/FileMaker\ Pro.app
+  %(prog)s --color "#00A7FF" -o ~/Desktop/output.icns
+  %(prog)s --color "#FF8A00" --text 22
+  %(prog)s --text 22 --bg-color "#F0F0F0" --app /Applications/FileMaker\ Pro.app
+  %(prog)s --color "#FF8A00" --bg-color "#E8E8E8" --text 22
+  %(prog)s --text 22 --text-color "#FF0000"
+  %(prog)s --text 22 --text-color "#FFFFFF" --bg-color "#000000"
 
-If no output path is provided, the app's icon will be updated directly using fileicon.
-If output path is provided, the watermarked icon will be saved to that location instead.
+If --app is provided, the app's icon will be updated directly using fileicon.
+If --output is provided, the watermarked icon will be saved to that location.
+If neither --app nor --output is provided, the icon will be saved to your Desktop.
 
 The --color option allows you to recolor any colored parts of the icon (non-whitish,
 non-black/grayish regions) while preserving the original lighting and shadows.
@@ -339,15 +399,14 @@ The --text-color option allows you to customize the watermark text color.
         '-a', '--app',
         dest='app_path',
         metavar='APP_PATH',
-        required=True,
-        help='Path to the .app bundle containing FM12App.icns'
+        help='Optional: Path to the .app bundle to update with the watermarked icon using fileicon.'
     )
     
     parser.add_argument(
         '-o', '--output',
         dest='output_path',
         metavar='OUTPUT_PATH',
-        help='Optional: Path to save the watermarked .icns file. If not provided, the app\'s icon will be updated directly using fileicon.'
+        help='Optional: Path to save the watermarked .icns file. If not provided and --app is not specified, the watermarked icon will be saved to your Desktop.'
     )
     
     parser.add_argument(
@@ -365,7 +424,7 @@ The --text-color option allows you to customize the watermark text color.
     )
     
     parser.add_argument(
-        '-bc', '--bg-color',
+        '-bg', '-bc', '--bg-color',
         dest='bg_color',
         metavar='HEX_COLOR',
         help='Optional: Hex color to replace white/light background regions (e.g., #F0F0F0). Preserves gradients and shading.'
@@ -400,15 +459,16 @@ def main():
             print(f"Warning: Invalid text color '{text_color}': {e}")
             print("Using default text color instead.")
     
-    # Find the FM12App.icns file
-    icns_path = find_fm12app_icns(app_path)
-    if not icns_path:
-        sys.exit(1)
-    
-    print(f"Found FM12App.icns at: {icns_path}")
-    
     # Create temporary directory
     with tempfile.TemporaryDirectory() as temp_dir:
+        print("Creating FM12App.icns from embedded data...")
+        icns_path = create_embedded_icns(temp_dir)
+        
+        if not icns_path:
+            sys.exit(1)
+        
+        print(f"Created FM12App.icns at: {icns_path}")
+        
         print("Extracting images from .icns file...")
         iconset_path = extract_icns_images(icns_path, temp_dir)
         
@@ -422,7 +482,7 @@ def main():
             print("Error: No PNG files found in iconset")
             sys.exit(1)
         
-        print(f"Found {len(png_files)} images to watermark")
+        print(f"Found {len(png_files)} images to process")
         
         # Process images: tint first (if specified), then add watermark
         for i, png_file in enumerate(png_files):
@@ -455,19 +515,11 @@ def main():
                 print(f"Adding watermark to {png_file.name}...")
                 add_watermark_to_image(png_file, watermark_text, text_color_rgba)
         
-        # Determine output behavior
-        if output_path:
-            # Save to specified output path (disable app icon update)
-            output_icns = Path(output_path)
-            print(f"Creating watermarked .icns file at {output_icns}...")
-            if create_icns_from_iconset(iconset_path, output_icns):
-                print(f"Success! Watermarked icon saved to: {output_icns}")
-            else:
-                sys.exit(1)
-        else:
-            # Update app bundle icon directly using fileicon
+        # Determine output behavior based on arguments
+        if app_path:
+            # Update app bundle icon using fileicon
             temp_icns = Path(temp_dir) / "watermarked.icns"
-            print("Creating temporary watermarked .icns file...")
+            print("Creating watermarked .icns file...")
             if create_icns_from_iconset(iconset_path, temp_icns):
                 print(f"Updating app icon for {app_path}...")
                 if update_app_icon(app_path, temp_icns):
@@ -475,10 +527,35 @@ def main():
                     print("Note: You may need to refresh Finder or restart the app to see the changes.")
                 else:
                     print("Failed to update app icon. You can manually drag the icon to the app:")
-                    fallback_path = Path.home() / "Desktop" / f"FM12App_watermarked.icns"
-                    if create_icns_from_iconset(iconset_path, fallback_path):
-                        print(f"Watermarked icon saved to: {fallback_path}")
+                    fallback_path = Path.home() / "Desktop" / "FM12App_watermarked.icns"
+                    import shutil
+                    shutil.copy2(temp_icns, fallback_path)
+                    print(f"Watermarked icon saved to: {fallback_path}")
                     sys.exit(1)
+            else:
+                sys.exit(1)
+        elif output_path:
+            # Save to specified output path
+            output_icns = Path(output_path)
+            print(f"Creating watermarked .icns file at {output_icns}...")
+            if create_icns_from_iconset(iconset_path, output_icns):
+                print(f"Success! Watermarked icon saved to: {output_icns}")
+            else:
+                sys.exit(1)
+        else:
+            # Save to Desktop with descriptive name
+            temp_icns = Path(temp_dir) / "watermarked.icns"
+            print("Creating watermarked .icns file...")
+            if create_icns_from_iconset(iconset_path, temp_icns):
+                desktop_path = save_icon_to_desktop(temp_icns, watermark_text, color, bg_color)
+                if desktop_path:
+                    print(f"Success! Watermarked icon saved to: {desktop_path}")
+                else:
+                    # Fallback: save with simple name
+                    fallback_path = Path.home() / "Desktop" / "FM12App_watermarked.icns"
+                    import shutil
+                    shutil.copy2(temp_icns, fallback_path)
+                    print(f"Watermarked icon saved to: {fallback_path}")
             else:
                 sys.exit(1)
 
