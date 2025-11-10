@@ -41,7 +41,7 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 
    Create a symlink (preferred if you want to keep the script in its current location)
 
-   Note: When using symlinks, both files must remain in the original directory:
+   Note: When using symlinks, the file must remain in the original directory:
 
    ```bash
    sudo ln -s "$(pwd)/fm_watermark_icon.py" /usr/local/bin/fm_watermark_icon
