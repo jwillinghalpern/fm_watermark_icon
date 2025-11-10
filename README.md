@@ -39,16 +39,18 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 
 5. (Optional but recommended) Add the script to your PATH for easy access
 
-   **Option A: Copy to PATH**
+   Create a symlink (preferred if you want to keep the script in its current location)
+
+   Note: When using symlinks, both files must remain in the original directory:
 
    ```bash
-   cp fm_watermark_icon.py /usr/local/bin/fm_watermark_icon
+   sudo ln -s "$(pwd)/fm_watermark_icon.py" /usr/local/bin/fm_watermark_icon
    ```
 
-   **Option B: Create a symlink (preferred if you want to keep the script in its current location)**
+   Or copy the script to a directory already in your PATH. If you choose this method, you may need to update the copied script in the future when changes are made in this repository
 
    ```bash
-   ln -s "$(pwd)/fm_watermark_icon.py" /usr/local/bin/fm_watermark_icon
+   sudo cp fm_watermark_icon.py /usr/local/bin/fm_watermark_icon
    ```
 
 ## Usage Examples

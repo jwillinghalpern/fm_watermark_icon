@@ -1,1 +1,12 @@
 TODO.txt
+
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+.env
+.idea/
+.vscode/
+dist/
+build/
+*.log
