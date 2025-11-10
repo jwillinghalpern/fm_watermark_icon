@@ -367,7 +367,7 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(
         description="Add a watermark number to embedded FM12App.icns file with optional tinting and background recoloring.",
-        epilog="""
+        epilog=r"""
 Examples:
   %(prog)s --text 22
   %(prog)s --text 22 --app /Applications/FileMaker\ Pro.app
@@ -436,6 +436,11 @@ The --text-color option allows you to customize the watermark text color.
         metavar='HEX_COLOR',
         help='Optional: Hex color for watermark text (e.g., #FF0000). Default is dark gray.'
     )
+    
+    # Check if no arguments provided
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
     
     return parser.parse_args()
 
