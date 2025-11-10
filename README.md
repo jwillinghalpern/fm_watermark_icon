@@ -45,6 +45,7 @@ add a watermark to your FileMaker Pro icons to quickly differentiate filemaker v
 
    ```bash
    sudo cp fm_watermark_icon.py fm_watermark_icon_data.py /usr/local/bin/
+   sudo cp fm_watermark_icon_data.py fm_watermark_icon_data.py /usr/local/bin/
    sudo chmod +x /usr/local/bin/fm_watermark_icon.py
    # Create a symlink without the .py extension for easier access
    sudo ln -sf /usr/local/bin/fm_watermark_icon.py /usr/local/bin/fm_watermark_icon
